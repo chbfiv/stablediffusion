@@ -187,7 +187,12 @@ def main():
     config = OmegaConf.load(f"{opt.config}")
     model = load_model_from_config(config, f"{opt.ckpt}")
 
-    device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+    device = torch.device("cpu")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda")
+
     model = model.to(device)
 
     sampler = DDIMSampler(model)
@@ -231,7 +236,7 @@ def main():
 
     precision_scope = autocast if opt.precision == "autocast" else nullcontext
     with torch.no_grad():
-        with precision_scope("cuda"):
+        with precision_scope(device):
             with model.ema_scope():
                 all_samples = list()
                 for n in trange(opt.n_iter, desc="Sampling"):
